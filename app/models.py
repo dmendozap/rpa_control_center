@@ -23,6 +23,14 @@ def utc_now() -> datetime:
 
 
 class Role(db.Model):
+    """
+    Representación local de auth.role.
+
+    AuthManager es el propietario funcional de esta tabla.
+    El RPA Control Center solamente la utiliza para autenticación
+    y autorización.
+    """
+
     __tablename__ = "role"
     __table_args__ = {"schema": "auth"}
 
@@ -30,6 +38,7 @@ class Role(db.Model):
         Integer,
         primary_key=True,
     )
+
     role_description: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,
@@ -48,85 +57,143 @@ class Role(db.Model):
 
 
 class AuthUser(UserMixin, db.Model):
+    """
+    Representación local de auth.users.
+
+    La definición de columnas está alineada con el modelo User
+    mantenido por AuthManager.
+    """
+
     __tablename__ = "users"
-    __table_args__ = {"schema": "auth"}
+    __table_args__ = (
+        Index(
+            "idx_auth_users_schema_name",
+            "schema_name",
+        ),
+        Index(
+            "idx_auth_users_id_role",
+            "id_role",
+        ),
+        Index(
+            "idx_auth_users_is_active",
+            "is_active",
+        ),
+        Index(
+            "idx_auth_users_password_expires_at",
+            "password_expires_at",
+        ),
+        {"schema": "auth"},
+    )
 
     id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True,
     )
+
     username: Mapped[str] = mapped_column(
         String(50),
         unique=True,
         nullable=False,
     )
+
     email: Mapped[str] = mapped_column(
         String(120),
         unique=True,
         nullable=False,
     )
+
     password: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
     )
+
     schema_name: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
     )
+
     is_admin: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=False,
     )
+
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=True,
     )
+
     id_role: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("auth.role.id"),
         nullable=True,
     )
+
     password_changed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )
+
     password_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )
+
     must_change_password: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=False,
     )
+
     failed_login_attempts: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
         default=0,
     )
+
     locked_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )
+
     last_login_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )
 
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        onupdate=utc_now,
+    )
+
     role = relationship(
         "Role",
         back_populates="users",
-        lazy="joined",
     )
 
     def get_id(self) -> str:
+        """
+        Identificador de sesión exclusivo del RPA Control Center.
+
+        El prefijo no modifica el valor almacenado en auth.users.id.
+        """
         return f"auth:{self.id}"
 
     @property
     def role_description(self) -> str:
-        if self.role is None or not self.role.role_description:
+        if self.role is None:
+            return ""
+
+        if not self.role.role_description:
             return ""
 
         return self.role.role_description.strip()
@@ -144,10 +211,27 @@ class AuthUser(UserMixin, db.Model):
 
         return expires_at <= utc_now()
 
+    def password_days_to_expire(self) -> int | None:
+        if self.password_expires_at is None:
+            return None
+
+        expires_at = self.password_expires_at
+
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(
+                tzinfo=timezone.utc,
+            )
+
+        return max(
+            (expires_at - utc_now()).days,
+            0,
+        )
+
     def __repr__(self) -> str:
         return (
             f"<AuthUser id={self.id} "
-            f"email={self.email!r}>"
+            f"email={self.email!r} "
+            f"schema={self.schema_name!r}>"
         )
 
 
@@ -169,56 +253,68 @@ class ManagedApplication(db.Model):
         Integer,
         primary_key=True,
     )
+
     code: Mapped[str] = mapped_column(
         String(64),
         unique=True,
         nullable=False,
     )
+
     name: Mapped[str] = mapped_column(
         String(120),
         nullable=False,
     )
+
     description: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
     )
+
     service_name: Mapped[str] = mapped_column(
         String(128),
         unique=True,
         nullable=False,
     )
+
     application_url: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,
     )
+
     health_url: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,
     )
+
     log_file: Mapped[str | None] = mapped_column(
         String(1000),
         nullable=True,
     )
+
     display_order: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
         default=0,
     )
+
     is_enabled: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=True,
     )
+
     allow_control: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=True,
     )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         default=utc_now,
     )
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -256,6 +352,7 @@ class AuditEvent(db.Model):
         Integer,
         primary_key=True,
     )
+
     application_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey(
@@ -263,35 +360,43 @@ class AuditEvent(db.Model):
         ),
         nullable=True,
     )
+
     actor_user_id: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
     )
+
     actor_email: Mapped[str | None] = mapped_column(
         String(120),
         nullable=True,
     )
+
     action: Mapped[str] = mapped_column(
         String(80),
         nullable=False,
     )
+
     result: Mapped[str] = mapped_column(
         String(30),
         nullable=False,
     )
+
     remote_address: Mapped[str | None] = mapped_column(
         String(64),
         nullable=True,
     )
+
     message: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
+
     details: Mapped[dict] = mapped_column(
         JSONB,
         nullable=False,
         default=dict,
     )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
