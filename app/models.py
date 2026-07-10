@@ -155,14 +155,14 @@ class ManagedApplication(db.Model):
     __tablename__ = "managed_applications"
     __table_args__ = (
         Index(
-            "idx_rpa_control_app_display_order",
+            "idx_apps_managed_applications_display_order",
             "display_order",
         ),
         Index(
-            "idx_rpa_control_app_enabled",
+            "idx_apps_managed_applications_is_enabled",
             "is_enabled",
         ),
-        {"schema": "rpa_control"},
+        {"schema": "apps"},
     )
 
     id: Mapped[int] = mapped_column(
@@ -242,14 +242,14 @@ class AuditEvent(db.Model):
     __tablename__ = "audit_events"
     __table_args__ = (
         Index(
-            "idx_rpa_control_audit_created_at",
+            "idx_apps_audit_events_created_at",
             "created_at",
         ),
         Index(
-            "idx_rpa_control_audit_action",
+            "idx_apps_audit_events_action",
             "action",
         ),
-        {"schema": "rpa_control"},
+        {"schema": "apps"},
     )
 
     id: Mapped[int] = mapped_column(
@@ -259,7 +259,7 @@ class AuditEvent(db.Model):
     application_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey(
-            "rpa_control.managed_applications.id"
+            "apps.managed_applications.id"
         ),
         nullable=True,
     )
