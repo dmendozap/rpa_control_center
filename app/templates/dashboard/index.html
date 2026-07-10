@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}
+Aplicaciones | RPA Control Center
+{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+    <div>
+        <span class="eyebrow">
+            SERVICIOS ADMINISTRADOS
+        </span>
+
+        <h1>Estado de aplicaciones</h1>
+
+        <p>
+            La información se actualiza
+            automáticamente.
+        </p>
+    </div>
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <strong id="summary-running">0</strong>
+            <span>En ejecución</span>
+        </div>
+
+        <div class="summary-card">
+            <strong id="summary-stopped">0</strong>
+            <span>Detenidas</span>
+        </div>
+
+        <div class="summary-card">
+            <strong id="summary-unhealthy">0</strong>
+            <span>Con alerta</span>
+        </div>
+    </div>
+</section>
+
+<section class="application-grid">
+    {% for application in applications %}
+    <article
+        class="panel application-card"
+        data-application-card
+        data-app-code="{{ application.code }}"
+    >
+        <div class="application-card-header">
+            <div>
+                <span
+                    class="status-badge status-loading"
+                    data-field="service-state"
+                >
+                    Consultando
+                </span>
+
+                <h2>{{ application.name }}</h2>
+
+                <p>
+                    {{ application.description or "" }}
+                </p>
+            </div>
+
+            <a
+                class="button button-secondary"
+                href="{{ url_for('applications.detail', code=application.code) }}"
+            >
+                Ver detalle
+            </a>
+        </div>
+
+        <dl class="metrics-grid">
+            <div>
+                <dt>Health</dt>
+                <dd data-field="health-status">—</dd>
+            </div>
+
+            <div>
+                <dt>PID</dt>
+                <dd data-field="process-id">—</dd>
+            </div>
+
+            <div>
+                <dt>CPU</dt>
+                <dd data-field="cpu">—</dd>
+            </div>
+
+            <div>
+                <dt>Memoria</dt>
+                <dd data-field="memory">—</dd>
+            </div>
+
+            <div>
+                <dt>Uptime</dt>
+                <dd data-field="uptime">—</dd>
+            </div>
+
+            <div>
+                <dt>Respuesta</dt>
+                <dd data-field="response-time">—</dd>
+            </div>
+        </dl>
+
+        {% if
+            access_level.value >= 20
+            and application.allow_control
+        %}
+        <div class="action-row">
+            <button
+                class="button button-success"
+                data-service-action="start"
+                data-app-code="{{ application.code }}"
+            >
+                Iniciar
+            </button>
+
+            <button
+                class="button button-warning"
+                data-service-action="restart"
+                data-app-code="{{ application.code }}"
+            >
+                Reiniciar
+            </button>
+
+            <button
+                class="button button-danger"
+                data-service-action="stop"
+                data-app-code="{{ application.code }}"
+            >
+                Detener
+            </button>
+        </div>
+        {% endif %}
+    </article>
+
+    {% else %}
+    <div class="empty-state panel">
+        No hay aplicaciones registradas.
+
+        Ejecuta:
+
+        <code>
+            flask --app wsgi:app seed-applications
+        </code>
+    </div>
+    {% endfor %}
+</section>
+{% endblock %}

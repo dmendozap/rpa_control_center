@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}
+Acceso denegado | RPA Control Center
+{% endblock %}
+
+{% block content %}
+<section class="error-page panel">
+    <span class="error-code">403</span>
+    <h1>Acceso denegado</h1>
+
+    <p>
+        No tienes permisos suficientes para
+        ejecutar esta operación.
+    </p>
+
+    <a
+        class="button button-primary"
+        href="{{ url_for('dashboard.index') }}"
+    >
+        Volver al inicio
+    </a>
+</section>
+{% endblock %}

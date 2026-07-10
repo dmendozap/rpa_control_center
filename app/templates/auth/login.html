@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}
+Ingreso | RPA Control Center
+{% endblock %}
+
+{% block content %}
+<section class="login-layout">
+    <div class="login-copy">
+        <span class="eyebrow">
+            OPERACIÓN CENTRALIZADA
+        </span>
+
+        <h1>
+            Supervisión y control de
+            aplicaciones RPA
+        </h1>
+
+        <p>
+            Consulta disponibilidad, salud,
+            métricas y logs de los servicios
+            autorizados desde una única consola.
+        </p>
+    </div>
+
+    <form
+        class="panel login-panel"
+        method="post"
+        novalidate
+    >
+        {{ form.hidden_tag() }}
+
+        <h2>Iniciar sesión</h2>
+
+        <p class="muted">
+            Usa las credenciales administradas
+            por AuthManager.
+        </p>
+
+        <label for="{{ form.identifier.id }}">
+            {{ form.identifier.label.text }}
+        </label>
+
+        {{ form.identifier(
+            class="input",
+            autocomplete="username"
+        ) }}
+
+        {% for error in form.identifier.errors %}
+        <small class="field-error">
+            {{ error }}
+        </small>
+        {% endfor %}
+
+        <label for="{{ form.password.id }}">
+            {{ form.password.label.text }}
+        </label>
+
+        {{ form.password(
+            class="input",
+            autocomplete="current-password"
+        ) }}
+
+        {% for error in form.password.errors %}
+        <small class="field-error">
+            {{ error }}
+        </small>
+        {% endfor %}
+
+        {{ form.submit(
+            class="button button-primary button-block"
+        ) }}
+    </form>
+</section>
+{% endblock %}

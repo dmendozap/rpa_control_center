@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}
+Auditoría | RPA Control Center
+{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+    <div>
+        <span class="eyebrow">
+            TRAZABILIDAD
+        </span>
+
+        <h1>Eventos de auditoría</h1>
+
+        <p>
+            Últimos 300 eventos registrados
+            por la consola.
+        </p>
+    </div>
+</section>
+
+<section class="panel table-panel">
+    <div class="table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>Aplicación</th>
+                    <th>Acción</th>
+                    <th>Resultado</th>
+                    <th>Dirección</th>
+                    <th>Detalle</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for event in events %}
+                <tr>
+                    <td>
+                        {{ event.created_at.strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        ) }}
+                    </td>
+
+                    <td>
+                        {{ event.actor_email or "—" }}
+                    </td>
+
+                    <td>
+                        {{
+                            event.application.name
+                            if event.application
+                            else "Control Center"
+                        }}
+                    </td>
+
+                    <td>
+                        <code>{{ event.action }}</code>
+                    </td>
+
+                    <td>
+                        <span
+                            class="status-badge status-{{
+                                'running'
+                                if event.result == 'success'
+                                else 'stopped'
+                            }}"
+                        >
+                            {{ event.result }}
+                        </span>
+                    </td>
+
+                    <td>
+                        {{ event.remote_address or "—" }}
+                    </td>
+
+                    <td>
+                        {{ event.message or "—" }}
+                    </td>
+                </tr>
+
+                {% else %}
+                <tr>
+                    <td colspan="7">
+                        No hay eventos registrados.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
