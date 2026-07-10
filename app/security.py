@@ -7,7 +7,7 @@ from functools import wraps
 from typing import Any, Callable, TypeVar, cast
 from urllib.parse import urljoin, urlparse
 
-from flask import abort, current_app, request
+from flask import abort, current_app, redirect, request, url_for
 from flask_login import UserMixin, current_user
 from werkzeug.security import check_password_hash
 
@@ -88,6 +88,18 @@ def get_access_level(user: Any) -> AccessLevel:
     return AccessLevel.NONE
 
 
+def is_api_request() -> bool:
+    if request.path.startswith("/applications/"):
+        return True
+
+    best_match = request.accept_mimetypes.best
+
+    return best_match in {
+        "application/json",
+        "text/event-stream",
+    }
+
+
 F = TypeVar(
     "F",
     bound=Callable[..., Any],
@@ -101,7 +113,21 @@ def access_required(
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any):
             if not current_user.is_authenticated:
-                abort(401)
+                if is_api_request():
+                    abort(401)
+
+                next_url = (
+                    request.full_path
+                    if request.query_string
+                    else request.path
+                )
+
+                return redirect(
+                    url_for(
+                        "auth.login",
+                        next=next_url,
+                    )
+                )
 
             if get_access_level(current_user) < minimum:
                 abort(403)
@@ -121,6 +147,7 @@ def is_safe_redirect_target(
 
     host_url = request.host_url
     reference = urlparse(host_url)
+
     candidate = urlparse(
         urljoin(host_url, target)
     )

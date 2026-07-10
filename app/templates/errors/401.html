@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}
+Autenticación requerida | RPA Control Center
+{% endblock %}
+
+{% block content %}
+<section class="error-page panel">
+    <span class="error-code">401</span>
+
+    <h1>Autenticación requerida</h1>
+
+    <p>
+        Debes iniciar sesión para acceder
+        a este recurso.
+    </p>
+
+    <a
+        class="button button-primary"
+        href="{{ url_for('auth.login') }}"
+    >
+        Iniciar sesión
+    </a>
+</section>
+{% endblock %}
