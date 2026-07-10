@@ -1,0 +1,49 @@
+<service>
+  <id>RPA.ControlCenter</id>
+
+  <name>RPA - Control Center</name>
+
+  <description>
+    Consola central de supervisión y control de aplicaciones RPA.
+  </description>
+
+  <executable>
+    C:\Apps\RPAControlCenter\.venv\Scripts\python.exe
+  </executable>
+
+  <arguments>
+    -u serve_waitress.py
+  </arguments>
+
+  <workingdirectory>
+    C:\Apps\RPAControlCenter
+  </workingdirectory>
+
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>true</delayedAutoStart>
+  <hidewindow>true</hidewindow>
+
+  <logpath>
+    C:\RPA\logs\control-center\service
+  </logpath>
+
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>10</keepFiles>
+  </log>
+
+  <onfailure
+    action="restart"
+    delay="10 sec"
+  />
+
+  <onfailure
+    action="restart"
+    delay="30 sec"
+  />
+
+  <onfailure action="none"/>
+
+  <resetfailure>1 hour</resetfailure>
+  <stoptimeout>30 sec</stoptimeout>
+</service>
