@@ -4,26 +4,14 @@ const csrfToken = document
     .querySelector('meta[name="csrf-token"]')
     ?.getAttribute("content");
 
-
 function formatUptime(seconds) {
-    if (
-        seconds === null ||
-        seconds === undefined
-    ) {
+    if (seconds === null || seconds === undefined) {
         return "—";
     }
 
-    const days = Math.floor(
-        seconds / 86400
-    );
-
-    const hours = Math.floor(
-        (seconds % 86400) / 3600
-    );
-
-    const minutes = Math.floor(
-        (seconds % 3600) / 60
-    );
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
 
     if (days > 0) {
         return `${days}d ${hours}h ${minutes}m`;
@@ -36,7 +24,6 @@ function formatUptime(seconds) {
     return `${minutes}m`;
 }
 
-
 function setText(container, field, value) {
     const element = container.querySelector(
         `[data-field="${field}"]`
@@ -46,7 +33,6 @@ function setText(container, field, value) {
         element.textContent = value ?? "—";
     }
 }
-
 
 function setServiceState(container, state) {
     const element = container.querySelector(
@@ -59,92 +45,82 @@ function setServiceState(container, state) {
 
     const normalized = state || "unknown";
 
-    element.textContent = normalized.replaceAll(
-        "_",
-        " "
-    );
-
-    element.className =
-        `status-badge status-${normalized}`;
+    element.textContent = normalized.replaceAll("_", " ");
+    element.className = `status-badge status-${normalized}`;
 }
-
 
 function renderSnapshot(container, snapshot) {
     const service = snapshot.service || {};
     const health = snapshot.health || {};
     const metrics = snapshot.metrics || {};
 
-    setServiceState(
-        container,
-        service.state
-    );
-
-    setText(
-        container,
-        "service-name",
-        service.name
-    );
-
-    setText(
-        container,
-        "start-mode",
-        service.start_mode
-    );
-
+    setServiceState(container, service.state);
+    setText(container, "service-name", service.name);
+    setText(container, "start-mode", service.start_mode);
     setText(
         container,
         "process-id",
         service.process_id || "—"
     );
-
     setText(
         container,
         "health-status",
         health.status || "—"
     );
-
     setText(
         container,
         "response-time",
-        health.response_time_ms !== null &&
-        health.response_time_ms !== undefined
+        health.response_time_ms !== null
+        && health.response_time_ms !== undefined
             ? `${health.response_time_ms} ms`
             : "—"
     );
-
     setText(
         container,
         "cpu",
-        metrics.cpu_percent !== null &&
-        metrics.cpu_percent !== undefined
+        metrics.cpu_percent !== null
+        && metrics.cpu_percent !== undefined
             ? `${metrics.cpu_percent}%`
             : "—"
     );
-
     setText(
         container,
         "memory",
-        metrics.memory_mb !== null &&
-        metrics.memory_mb !== undefined
+        metrics.memory_mb !== null
+        && metrics.memory_mb !== undefined
             ? `${metrics.memory_mb} MB`
             : "—"
     );
-
     setText(
         container,
         "uptime",
-        formatUptime(
-            metrics.uptime_seconds
-        )
+        formatUptime(metrics.uptime_seconds)
     );
 
-    container.dataset.serviceState =
-        service.state || "unknown";
-
-    container.dataset.healthState =
-        health.status || "unknown";
+    container.dataset.serviceState = (
+        service.state || "unknown"
+    );
+    container.dataset.healthState = (
+        health.status || "unknown"
+    );
 }
 
+async function parseJsonResponse(response) {
+    const contentType = (
+        response.headers.get("content-type") || ""
+    ).toLowerCase();
+
+    if (!contentType.includes("application/json")) {
+        const body = await response.text();
+
+        throw new Error(
+            `Respuesta no JSON. HTTP ${response.status}. `
+            + body.slice(0, 150)
+        );
+    }
+
+    return response.json();
+}
 
 async function refreshApplication(container) {
     const code = container.dataset.appCode;
@@ -155,49 +131,68 @@ async function refreshApplication(container) {
 
     try {
         const response = await fetch(
-            `/applications/${code}/status`,
+            `/applications/${encodeURIComponent(code)}/status`,
             {
                 headers: {
                     "Accept": "application/json"
                 },
-                credentials: "same-origin"
+                credentials: "same-origin",
+                cache: "no-store"
             }
         );
 
-        const payload = await response.json();
+        const payload = await parseJsonResponse(response);
 
         if (!response.ok) {
             throw new Error(
-                payload.error ||
-                "No fue posible consultar el estado."
+                payload.error
+                || "No fue posible consultar el estado."
             );
         }
 
-        renderSnapshot(
-            container,
-            payload
-        );
-
+        renderSnapshot(container, payload);
     } catch (error) {
-        setServiceState(
-            container,
-            "unknown"
+        console.error(
+            `Error consultando ${code}:`,
+            error
         );
 
+        setServiceState(container, "unknown");
         setText(
             container,
             "health-status",
             "unavailable"
         );
+        setText(
+            container,
+            "response-time",
+            "—"
+        );
+        setText(
+            container,
+            "process-id",
+            "—"
+        );
+        setText(
+            container,
+            "cpu",
+            "—"
+        );
+        setText(
+            container,
+            "memory",
+            "—"
+        );
+        setText(
+            container,
+            "uptime",
+            "—"
+        );
 
-        container.dataset.serviceState =
-            "unknown";
-
-        container.dataset.healthState =
-            "unhealthy";
+        container.dataset.serviceState = "unknown";
+        container.dataset.healthState = "unhealthy";
     }
 }
-
 
 function updateSummary() {
     const cards = [
@@ -207,37 +202,26 @@ function updateSummary() {
     ];
 
     const running = cards.filter(
-        card =>
-            card.dataset.serviceState
-            === "running"
+        card => card.dataset.serviceState === "running"
     ).length;
 
     const stopped = cards.filter(
-        card =>
-            card.dataset.serviceState
-            === "stopped"
+        card => card.dataset.serviceState === "stopped"
     ).length;
 
     const unhealthy = cards.filter(
-        card =>
-            card.dataset.healthState
-            === "unhealthy"
+        card => card.dataset.healthState === "unhealthy"
     ).length;
 
-    const runningElement =
-        document.getElementById(
-            "summary-running"
-        );
-
-    const stoppedElement =
-        document.getElementById(
-            "summary-stopped"
-        );
-
-    const unhealthyElement =
-        document.getElementById(
-            "summary-unhealthy"
-        );
+    const runningElement = document.getElementById(
+        "summary-running"
+    );
+    const stoppedElement = document.getElementById(
+        "summary-stopped"
+    );
+    const unhealthyElement = document.getElementById(
+        "summary-unhealthy"
+    );
 
     if (runningElement) {
         runningElement.textContent = running;
@@ -248,11 +232,9 @@ function updateSummary() {
     }
 
     if (unhealthyElement) {
-        unhealthyElement.textContent =
-            unhealthy;
+        unhealthyElement.textContent = unhealthy;
     }
 }
-
 
 async function refreshAll() {
     const containers = [
@@ -271,20 +253,24 @@ async function refreshAll() {
     updateSummary();
 }
 
-
 async function executeServiceAction(button) {
     const code = button.dataset.appCode;
-    const action =
-        button.dataset.serviceAction;
-
-    const originalText =
-        button.textContent;
+    const action = button.dataset.serviceAction;
+    const originalText = button.textContent;
 
     const confirmationText = {
         start: "¿Iniciar este servicio?",
         stop: "¿Detener este servicio?",
         restart: "¿Reiniciar este servicio?"
     }[action];
+
+    if (!confirmationText) {
+        showToast(
+            "Acción no soportada.",
+            "error"
+        );
+        return;
+    }
 
     if (!window.confirm(confirmationText)) {
         return;
@@ -295,67 +281,59 @@ async function executeServiceAction(button) {
 
     try {
         const response = await fetch(
-            `/applications/${code}/actions/${action}`,
+            `/applications/${encodeURIComponent(code)}`
+            + `/actions/${encodeURIComponent(action)}`,
             {
                 method: "POST",
                 credentials: "same-origin",
                 headers: {
-                    "Accept":
-                        "application/json",
-                    "X-CSRFToken":
-                        csrfToken
+                    "Accept": "application/json",
+                    "X-CSRFToken": csrfToken || ""
                 }
             }
         );
 
-        const payload = await response.json();
+        const payload = await parseJsonResponse(response);
 
         if (!response.ok) {
             throw new Error(
-                payload.error ||
-                "La operación falló."
+                payload.error || "La operación falló."
             );
         }
 
         showToast(
-            payload.message,
+            payload.message || "Operación completada.",
             "success"
         );
 
         await refreshAll();
-
     } catch (error) {
+        console.error(
+            `Error ejecutando ${action} sobre ${code}:`,
+            error
+        );
+
         showToast(
             error.message,
             "error"
         );
-
     } finally {
         button.disabled = false;
         button.textContent = originalText;
     }
 }
 
-
-function showToast(
-    message,
-    type = "success"
-) {
-    const container =
-        document.getElementById(
-            "toast-container"
-        );
+function showToast(message, type = "success") {
+    const container = document.getElementById(
+        "toast-container"
+    );
 
     if (!container) {
         return;
     }
 
-    const toast =
-        document.createElement("div");
-
-    toast.className =
-        `toast toast-${type}`;
-
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${type}`;
     toast.textContent = message;
 
     container.appendChild(toast);
@@ -366,17 +344,13 @@ function showToast(
     );
 }
 
-
 function initializeLogStream() {
-    const detail =
-        document.querySelector(
-            "[data-application-detail]"
-        );
-
-    const terminal =
-        document.getElementById(
-            "live-log"
-        );
+    const detail = document.querySelector(
+        "[data-application-detail]"
+    );
+    const terminal = document.getElementById(
+        "live-log"
+    );
 
     if (!detail || !terminal) {
         return;
@@ -385,7 +359,8 @@ function initializeLogStream() {
     const code = detail.dataset.appCode;
 
     const source = new EventSource(
-        `/applications/${code}/logs/stream`,
+        `/applications/${encodeURIComponent(code)}`
+        + "/logs/stream",
         {
             withCredentials: true
         }
@@ -393,24 +368,26 @@ function initializeLogStream() {
 
     source.onmessage = event => {
         try {
-            const payload =
-                JSON.parse(event.data);
+            const payload = JSON.parse(event.data);
 
-            terminal.textContent +=
-                `${payload.line}\n`;
+            terminal.textContent += (
+                `${payload.line}\n`
+            );
 
-            terminal.scrollTop =
-                terminal.scrollHeight;
-
-        } catch {
-            // Ignora mensajes SSE inválidos.
+            terminal.scrollTop = (
+                terminal.scrollHeight
+            );
+        } catch (error) {
+            console.warn(
+                "Mensaje SSE inválido:",
+                error
+            );
         }
     };
 
     source.onerror = () => {
         showToast(
-            "La conexión de logs "
-            + "se está reintentando.",
+            "La conexión de logs se está reintentando.",
             "error"
         );
     };
@@ -430,7 +407,6 @@ function initializeLogStream() {
     );
 }
 
-
 document.addEventListener(
     "click",
     event => {
@@ -444,12 +420,10 @@ document.addEventListener(
     }
 );
 
-
 document.addEventListener(
     "DOMContentLoaded",
     async () => {
         await refreshAll();
-
         initializeLogStream();
 
         window.setInterval(

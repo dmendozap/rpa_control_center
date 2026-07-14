@@ -6,7 +6,7 @@
     "service_name": "RPA.ReporteNomina",
     "application_url": "http://127.0.0.1:8101/reports/payroll",
     "health_url": "http://127.0.0.1:8101/",
-    "log_file": "C:\\RPA\\logs\\reporte-nomina\\application.log",
+    "log_file": "D:\\RPA\\logs\\reporte-nomina\\application.log",
     "display_order": 10,
     "is_enabled": true,
     "allow_control": true
@@ -15,10 +15,10 @@
     "code": "presupuesto-recaudos",
     "name": "Presupuesto Recaudos",
     "description": "Aplicación de presupuesto, seguimiento y aplicación de recaudos.",
-    "service_name": "RPA.PresupuestoRecaudos",
-    "application_url": "http://127.0.0.1:8080/",
-    "health_url": "http://127.0.0.1:8080/",
-    "log_file": "C:\\RPA\\logs\\presupuesto-recaudos\\application.log",
+    "service_name": "RPAPresupuestoRecaudos",
+    "application_url": "http://coyuppms001:8080/",
+    "health_url": "http://127.0.0.1:8080/health/ready",
+    "log_file": "D:\\RPA\\logs\\presupuesto-recaudos\\application.log",
     "display_order": 20,
     "is_enabled": true,
     "allow_control": true
@@ -30,7 +30,7 @@
     "service_name": "RPA.AuthManager",
     "application_url": "http://127.0.0.1:5000/",
     "health_url": "http://127.0.0.1:5000/",
-    "log_file": "C:\\RPA\\logs\\auth-manager\\application.log",
+    "log_file": "D:\\RPA\\logs\\auth-manager\\application.log",
     "display_order": 30,
     "is_enabled": true,
     "allow_control": true
