@@ -1,75 +1,420 @@
 {% extends "base.html" %}
 
 {% block title %}
-Ingreso | RPA Control Center
+Acceso administrativo | RPA Control Center
+{% endblock %}
+
+{% block body_class %}
+auth-page
+{% endblock %}
+
+{% block main_class %}
+auth-page-shell
 {% endblock %}
 
 {% block content %}
-<section class="login-layout">
-    <div class="login-copy">
-        <span class="eyebrow">
-            OPERACIÓN CENTRALIZADA
-        </span>
+<section class="auth-screen">
 
-        <h1>
-            Supervisión y control de
-            aplicaciones RPA
-        </h1>
+    <div class="auth-card">
 
-        <p>
-            Consulta disponibilidad, salud,
-            métricas y logs de los servicios
-            autorizados desde una única consola.
-        </p>
+        <section class="auth-form-panel">
+            <div class="auth-form-container">
+
+                <header class="auth-brand">
+                    <div
+                        class="auth-brand-mark"
+                        aria-hidden="true"
+                    >
+                        RC
+                    </div>
+
+                    <div class="auth-brand-copy">
+                        <strong>RPA Control Center</strong>
+                        <span>Operations Console</span>
+                    </div>
+                </header>
+
+                <div class="auth-heading">
+                    <span class="auth-eyebrow">
+                        ACCESO ADMINISTRATIVO
+                    </span>
+
+                    <h1>Ingresar al panel</h1>
+
+                    <p>
+                        Utiliza tu usuario o correo corporativo para acceder
+                        a la supervisión centralizada de aplicaciones RPA.
+                    </p>
+                </div>
+
+                <form
+                    class="auth-form"
+                    method="post"
+                    novalidate
+                >
+                    {{ form.hidden_tag() }}
+
+                    <div class="auth-field">
+                        <label for="{{ form.identifier.id }}">
+                            Usuario o correo
+                        </label>
+
+                        <div class="
+                            auth-input-shell
+                            {% if form.identifier.errors %}
+                            auth-input-shell-error
+                            {% endif %}
+                        ">
+                            <span
+                                class="auth-input-icon"
+                                aria-hidden="true"
+                            >
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    role="img"
+                                >
+                                    <path
+                                        d="M12 12a4 4 0 1 0 0-8
+                                           4 4 0 0 0 0 8Z"
+                                    ></path>
+                                    <path
+                                        d="M4 21a8 8 0 0 1 16 0"
+                                    ></path>
+                                </svg>
+                            </span>
+
+                            {{ form.identifier(
+                                class="auth-input",
+                                placeholder="usuario@empresa.com",
+                                autocomplete="username",
+                                autofocus=true,
+                                aria_invalid=(
+                                    "true"
+                                    if form.identifier.errors
+                                    else "false"
+                                ),
+                                aria_describedby=(
+                                    "identifier-errors"
+                                    if form.identifier.errors
+                                    else ""
+                                )
+                            ) }}
+                        </div>
+
+                        {% if form.identifier.errors %}
+                        <div
+                            id="identifier-errors"
+                            class="auth-field-errors"
+                            role="alert"
+                        >
+                            {% for error in form.identifier.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="auth-field">
+                        <div class="auth-label-row">
+                            <label for="{{ form.password.id }}">
+                                Contraseña
+                            </label>
+
+                            <span class="auth-field-hint">
+                                Acceso protegido
+                            </span>
+                        </div>
+
+                        <div class="
+                            auth-input-shell
+                            {% if form.password.errors %}
+                            auth-input-shell-error
+                            {% endif %}
+                        ">
+                            <span
+                                class="auth-input-icon"
+                                aria-hidden="true"
+                            >
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    role="img"
+                                >
+                                    <rect
+                                        x="5"
+                                        y="10"
+                                        width="14"
+                                        height="10"
+                                        rx="2"
+                                    ></rect>
+                                    <path
+                                        d="M8 10V7a4 4 0 0 1 8 0v3"
+                                    ></path>
+                                    <path d="M12 14v2"></path>
+                                </svg>
+                            </span>
+
+                            {{ form.password(
+                                class="auth-input auth-password-input",
+                                placeholder="Ingresa tu contraseña",
+                                autocomplete="current-password",
+                                aria_invalid=(
+                                    "true"
+                                    if form.password.errors
+                                    else "false"
+                                ),
+                                aria_describedby=(
+                                    "password-errors"
+                                    if form.password.errors
+                                    else ""
+                                )
+                            ) }}
+
+                            <button
+                                class="auth-password-toggle"
+                                type="button"
+                                data-password-toggle
+                                aria-label="Mostrar contraseña"
+                                aria-controls="{{ form.password.id }}"
+                                aria-pressed="false"
+                            >
+                                <svg
+                                    class="auth-eye-visible"
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        d="M2.5 12s3.5-6 9.5-6
+                                           9.5 6 9.5 6-3.5 6-9.5 6
+                                          S2.5 12 2.5 12Z"
+                                    ></path>
+                                    <circle
+                                        cx="12"
+                                        cy="12"
+                                        r="2.5"
+                                    ></circle>
+                                </svg>
+
+                                <svg
+                                    class="auth-eye-hidden is-hidden"
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        d="m3 3 18 18"
+                                    ></path>
+                                    <path
+                                        d="M10.6 6.2A10.8 10.8 0 0 1
+                                           12 6c6 0 9.5 6 9.5 6
+                                           a17.3 17.3 0 0 1-2.1 2.8"
+                                    ></path>
+                                    <path
+                                        d="M6.3 6.3C3.9 8.1 2.5 12
+                                           2.5 12s3.5 6 9.5 6
+                                           c1.3 0 2.5-.3 3.6-.7"
+                                    ></path>
+                                    <path
+                                        d="M10.2 10.2a2.5 2.5 0 0 0
+                                           3.6 3.6"
+                                    ></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        {% if form.password.errors %}
+                        <div
+                            id="password-errors"
+                            class="auth-field-errors"
+                            role="alert"
+                        >
+                            {% for error in form.password.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {{ form.submit(
+                        class="auth-submit",
+                        value="Ingresar al panel"
+                    ) }}
+                </form>
+
+                <div class="auth-security-notice">
+                    <span
+                        class="auth-security-icon"
+                        aria-hidden="true"
+                    >
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M12 3 5 6v5c0 4.8 2.9 8.2 7 10
+                                   4.1-1.8 7-5.2 7-10V6l-7-3Z"
+                            ></path>
+                            <path d="m9 12 2 2 4-4"></path>
+                        </svg>
+                    </span>
+
+                    <div>
+                        <strong>Acceso restringido</strong>
+                        <span>
+                            Las autenticaciones y operaciones administrativas
+                            son registradas para auditoría.
+                        </span>
+                    </div>
+                </div>
+
+                <footer class="auth-form-footer">
+                    <span>Entorno corporativo</span>
+                    <span aria-hidden="true">•</span>
+                    <span>Uso autorizado exclusivamente</span>
+                </footer>
+            </div>
+        </section>
+
+        <aside class="auth-operations-panel">
+            <div class="auth-grid-pattern" aria-hidden="true"></div>
+            <div class="auth-glow auth-glow-one" aria-hidden="true"></div>
+            <div class="auth-glow auth-glow-two" aria-hidden="true"></div>
+
+            <div class="operations-content">
+                <span class="operations-eyebrow">
+                    CENTRO DE OPERACIONES
+                </span>
+
+                <h2>
+                    Control centralizado
+                    <span>de servicios RPA</span>
+                </h2>
+
+                <p>
+                    Supervisa disponibilidad, rendimiento, registros y
+                    acciones administrativas desde una única consola.
+                </p>
+
+                <div class="operations-features">
+                    <div class="operations-feature">
+                        <span
+                            class="operations-feature-icon"
+                            aria-hidden="true"
+                        >
+                            <svg viewBox="0 0 24 24">
+                                <path
+                                    d="M4 17V9"
+                                ></path>
+                                <path
+                                    d="M10 17V5"
+                                ></path>
+                                <path
+                                    d="M16 17v-7"
+                                ></path>
+                                <path
+                                    d="M22 17V3"
+                                ></path>
+                            </svg>
+                        </span>
+
+                        <div>
+                            <strong>Supervisión operativa</strong>
+                            <span>
+                                Salud, disponibilidad y métricas de procesos.
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="operations-feature">
+                        <span
+                            class="operations-feature-icon"
+                            aria-hidden="true"
+                        >
+                            <svg viewBox="0 0 24 24">
+                                <path
+                                    d="M12 3 5 6v5c0 4.8 2.9 8.2
+                                       7 10 4.1-1.8 7-5.2 7-10V6l-7-3Z"
+                                ></path>
+                                <path d="M9 12h6"></path>
+                                <path d="M12 9v6"></path>
+                            </svg>
+                        </span>
+
+                        <div>
+                            <strong>Administración segura</strong>
+                            <span>
+                                Inicio, detención y reinicio controlado.
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="operations-feature">
+                        <span
+                            class="operations-feature-icon"
+                            aria-hidden="true"
+                        >
+                            <svg viewBox="0 0 24 24">
+                                <path
+                                    d="M5 4h14v16H5Z"
+                                ></path>
+                                <path d="M8 8h8"></path>
+                                <path d="M8 12h8"></path>
+                                <path d="M8 16h5"></path>
+                            </svg>
+                        </span>
+
+                        <div>
+                            <strong>Trazabilidad completa</strong>
+                            <span>
+                                Registro de accesos y acciones administrativas.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="operations-network"
+                aria-hidden="true"
+            >
+                <span class="network-orbit network-orbit-one"></span>
+                <span class="network-orbit network-orbit-two"></span>
+
+                <span class="network-line network-line-one"></span>
+                <span class="network-line network-line-two"></span>
+                <span class="network-line network-line-three"></span>
+
+                <div class="network-core">
+                    <span>RC</span>
+                    <small>CONTROL</small>
+                </div>
+
+                <div class="network-node network-node-one">
+                    <span></span>
+                    APP
+                </div>
+
+                <div class="network-node network-node-two">
+                    <span></span>
+                    RPA
+                </div>
+
+                <div class="network-node network-node-three">
+                    <span></span>
+                    LOG
+                </div>
+            </div>
+
+            <footer class="operations-footer">
+                <span class="operations-live-indicator"></span>
+
+                <span>
+                    Plataforma interna de administración
+                </span>
+            </footer>
+        </aside>
     </div>
-
-    <form
-        class="panel login-panel"
-        method="post"
-        novalidate
-    >
-        {{ form.hidden_tag() }}
-
-        <h2>Iniciar sesión</h2>
-
-        <p class="muted">
-            Usa las credenciales administradas
-            por AuthManager.
-        </p>
-
-        <label for="{{ form.identifier.id }}">
-            {{ form.identifier.label.text }}
-        </label>
-
-        {{ form.identifier(
-            class="input",
-            autocomplete="username"
-        ) }}
-
-        {% for error in form.identifier.errors %}
-        <small class="field-error">
-            {{ error }}
-        </small>
-        {% endfor %}
-
-        <label for="{{ form.password.id }}">
-            {{ form.password.label.text }}
-        </label>
-
-        {{ form.password(
-            class="input",
-            autocomplete="current-password"
-        ) }}
-
-        {% for error in form.password.errors %}
-        <small class="field-error">
-            {{ error }}
-        </small>
-        {% endfor %}
-
-        {{ form.submit(
-            class="button button-primary button-block"
-        ) }}
-    </form>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script
+    src="{{ url_for('static', filename='js/auth-login.js') }}"
+    defer
+></script>
 {% endblock %}
