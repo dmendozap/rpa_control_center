@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import threading
@@ -11,18 +12,19 @@ from app.services.service_manager import (
     ServiceStatus,
 )
 
+
 SERVICE_NAME_PATTERN = re.compile(
     r"^[A-Za-z0-9_.-]{1,128}$"
 )
 
 
 class ServiceOperationError(RuntimeError):
-    pass
+    """Error al consultar o administrar un servicio Windows."""
 
 
-class WindowsPowerShellServiceManager(
-    ServiceManager
-):
+class WindowsPowerShellServiceManager(ServiceManager):
+    """Administra servicios Windows mediante PowerShell."""
+
     def __init__(
         self,
         *,
@@ -42,47 +44,52 @@ class WindowsPowerShellServiceManager(
     ) -> ServiceStatus:
         self._validate_service_name(service_name)
 
-        script = r"""
-& {
-    param([string]$Name)
+        script = r'''
+$ErrorActionPreference = "Stop"
 
-    $OutputEncoding = [Console]::OutputEncoding =
-        [System.Text.UTF8Encoding]::new()
+$utf8 = New-Object System.Text.UTF8Encoding($false)
+$OutputEncoding = $utf8
+[Console]::OutputEncoding = $utf8
 
-    $escapedName = $Name.Replace("'", "''")
+$name = $env:RPA_SERVICE_NAME
 
-    $service = Get-CimInstance `
-        -ClassName Win32_Service `
-        -Filter "Name='$escapedName'" `
-        -ErrorAction SilentlyContinue
-
-    if ($null -eq $service) {
-        [PSCustomObject]@{
-            exists = $false
-            name = $Name
-            state = "not_found"
-            start_mode = $null
-            process_id = $null
-            message = "Servicio no encontrado"
-        } | ConvertTo-Json -Compress
-
-        exit 0
-    }
-
-    [PSCustomObject]@{
-        exists = $true
-        name = $service.Name
-        state = $service.State.ToLowerInvariant()
-        start_mode = $service.StartMode
-        process_id = [int]$service.ProcessId
-        message = $null
-    } | ConvertTo-Json -Compress
+if ([string]::IsNullOrWhiteSpace($name)) {
+    throw "RPA_SERVICE_NAME no fue suministrado."
 }
-"""
+
+$escapedName = $name.Replace("'", "''")
+
+$service = Get-CimInstance `
+    -ClassName Win32_Service `
+    -Filter "Name='$escapedName'" `
+    -ErrorAction SilentlyContinue
+
+if ($null -eq $service) {
+    [PSCustomObject]@{
+        exists = $false
+        name = $name
+        state = "not_found"
+        start_mode = $null
+        process_id = $null
+        message = "Servicio no encontrado"
+    } | ConvertTo-Json -Compress
+
+    exit 0
+}
+
+[PSCustomObject]@{
+    exists = $true
+    name = $service.Name
+    state = $service.State.ToLowerInvariant()
+    start_mode = $service.StartMode
+    process_id = [int]$service.ProcessId
+    message = $null
+} | ConvertTo-Json -Compress
+'''
 
         payload = self._run(
             script,
-            service_name,
+            service_name=service_name,
         )
 
         return self._to_status(
@@ -124,57 +131,104 @@ class WindowsPowerShellServiceManager(
     ) -> ServiceStatus:
         self._validate_service_name(service_name)
 
-        with self._locks[service_name]:
-            script = r"""
-& {
-    param(
-        [string]$Name,
-        [string]$Action,
-        [int]$TimeoutSeconds
-    )
+        normalized_action = action.strip().lower()
 
-    $OutputEncoding = [Console]::OutputEncoding =
-        [System.Text.UTF8Encoding]::new()
-
-    $service = Get-Service `
-        -Name $Name `
-        -ErrorAction Stop
-
-    $timeout = [TimeSpan]::FromSeconds(
-        $TimeoutSeconds
-    )
-
-    switch ($Action) {
-        "start" {
-            if (
-                $service.Status -ne
-                [System.ServiceProcess.ServiceControllerStatus]::Running
-            ) {
-                Start-Service `
-                    -Name $Name `
-                    -ErrorAction Stop
-            }
-
-            $service = Get-Service -Name $Name
-
-            $service.WaitForStatus(
-                [System.ServiceProcess.ServiceControllerStatus]::Running,
-                $timeout
+        if normalized_action not in {
+            "start",
+            "stop",
+            "restart",
+        }:
+            raise ServiceOperationError(
+                f"Acción no soportada: {action}"
             )
+
+        with self._locks[service_name]:
+            script = r'''
+$ErrorActionPreference = "Stop"
+
+$utf8 = New-Object System.Text.UTF8Encoding($false)
+$OutputEncoding = $utf8
+[Console]::OutputEncoding = $utf8
+
+$name = $env:RPA_SERVICE_NAME
+$action = $env:RPA_SERVICE_ACTION
+$timeoutSeconds = [int]$env:RPA_SERVICE_TIMEOUT_SECONDS
+
+if ([string]::IsNullOrWhiteSpace($name)) {
+    throw "RPA_SERVICE_NAME no fue suministrado."
+}
+
+if ([string]::IsNullOrWhiteSpace($action)) {
+    throw "RPA_SERVICE_ACTION no fue suministrado."
+}
+
+if ($timeoutSeconds -le 0) {
+    throw "RPA_SERVICE_TIMEOUT_SECONDS no es válido."
+}
+
+$service = Get-Service `
+    -Name $name `
+    -ErrorAction Stop
+
+$timeout = [TimeSpan]::FromSeconds(
+    $timeoutSeconds
+)
+
+switch ($action) {
+    "start" {
+        if (
+            $service.Status -ne
+            [System.ServiceProcess.ServiceControllerStatus]::Running
+        ) {
+            Start-Service `
+                -Name $name `
+                -ErrorAction Stop
         }
 
-        "stop" {
-            if (
-                $service.Status -ne
-                [System.ServiceProcess.ServiceControllerStatus]::Stopped
-            ) {
-                Stop-Service `
-                    -Name $Name `
-                    -Force `
-                    -ErrorAction Stop
-            }
+        $service = Get-Service `
+            -Name $name `
+            -ErrorAction Stop
 
-            $service = Get-Service -Name $Name
+        $service.WaitForStatus(
+            [System.ServiceProcess.ServiceControllerStatus]::Running,
+            $timeout
+        )
+    }
+
+    "stop" {
+        if (
+            $service.Status -ne
+            [System.ServiceProcess.ServiceControllerStatus]::Stopped
+        ) {
+            Stop-Service `
+                -Name $name `
+                -Force `
+                -ErrorAction Stop
+        }
+
+        $service = Get-Service `
+            -Name $name `
+            -ErrorAction Stop
+
+        $service.WaitForStatus(
+            [System.ServiceProcess.ServiceControllerStatus]::Stopped,
+            $timeout
+        )
+    }
+
+    "restart" {
+        if (
+            $service.Status -ne
+            [System.ServiceProcess.ServiceControllerStatus]::Stopped
+        ) {
+            Stop-Service `
+                -Name $name `
+                -Force `
+                -ErrorAction Stop
+
+            $service = Get-Service `
+                -Name $name `
+                -ErrorAction Stop
 
             $service.WaitForStatus(
                 [System.ServiceProcess.ServiceControllerStatus]::Stopped,
@@ -182,64 +236,46 @@ class WindowsPowerShellServiceManager(
             )
         }
 
-        "restart" {
-            if (
-                $service.Status -ne
-                [System.ServiceProcess.ServiceControllerStatus]::Stopped
-            ) {
-                Stop-Service `
-                    -Name $Name `
-                    -Force `
-                    -ErrorAction Stop
+        Start-Service `
+            -Name $name `
+            -ErrorAction Stop
 
-                $service = Get-Service -Name $Name
+        $service = Get-Service `
+            -Name $name `
+            -ErrorAction Stop
 
-                $service.WaitForStatus(
-                    [System.ServiceProcess.ServiceControllerStatus]::Stopped,
-                    $timeout
-                )
-            }
-
-            Start-Service `
-                -Name $Name `
-                -ErrorAction Stop
-
-            $service = Get-Service -Name $Name
-
-            $service.WaitForStatus(
-                [System.ServiceProcess.ServiceControllerStatus]::Running,
-                $timeout
-            )
-        }
-
-        default {
-            throw "Acción no soportada: $Action"
-        }
+        $service.WaitForStatus(
+            [System.ServiceProcess.ServiceControllerStatus]::Running,
+            $timeout
+        )
     }
 
-    $escapedName = $Name.Replace("'", "''")
-
-    $serviceInfo = Get-CimInstance `
-        -ClassName Win32_Service `
-        -Filter "Name='$escapedName'" `
-        -ErrorAction Stop
-
-    [PSCustomObject]@{
-        exists = $true
-        name = $serviceInfo.Name
-        state = $serviceInfo.State.ToLowerInvariant()
-        start_mode = $serviceInfo.StartMode
-        process_id = [int]$serviceInfo.ProcessId
-        message = $null
-    } | ConvertTo-Json -Compress
+    default {
+        throw "Acción no soportada: $action"
+    }
 }
-"""
+
+$escapedName = $name.Replace("'", "''")
+
+$serviceInfo = Get-CimInstance `
+    -ClassName Win32_Service `
+    -Filter "Name='$escapedName'" `
+    -ErrorAction Stop
+
+[PSCustomObject]@{
+    exists = $true
+    name = $serviceInfo.Name
+    state = $serviceInfo.State.ToLowerInvariant()
+    start_mode = $serviceInfo.StartMode
+    process_id = [int]$serviceInfo.ProcessId
+    message = $null
+} | ConvertTo-Json -Compress
+'''
 
             payload = self._run(
                 script,
-                service_name,
-                action,
-                str(self._timeout_seconds),
+                service_name=service_name,
+                action=normalized_action,
             )
 
             return self._to_status(
@@ -250,8 +286,22 @@ class WindowsPowerShellServiceManager(
     def _run(
         self,
         script: str,
-        *arguments: str,
+        *,
+        service_name: str,
+        action: str | None = None,
     ) -> dict:
+        environment = os.environ.copy()
+
+        environment.update(
+            {
+                "RPA_SERVICE_NAME": service_name,
+                "RPA_SERVICE_ACTION": action or "",
+                "RPA_SERVICE_TIMEOUT_SECONDS": str(
+                    self._timeout_seconds
+                ),
+            }
+        )
+
         command = [
             self._executable,
             "-NoLogo",
@@ -261,7 +311,6 @@ class WindowsPowerShellServiceManager(
             "Bypass",
             "-Command",
             script,
-            *arguments,
         ]
 
         creation_flags = getattr(
@@ -280,19 +329,22 @@ class WindowsPowerShellServiceManager(
                 check=False,
                 timeout=self._timeout_seconds + 10,
                 creationflags=creation_flags,
+                env=environment,
             )
         except (
             OSError,
             subprocess.TimeoutExpired,
         ) as exc:
             raise ServiceOperationError(
-                f"No fue posible ejecutar PowerShell: {exc}"
+                "No fue posible ejecutar PowerShell: "
+                f"{exc}"
             ) from exc
 
         if completed.returncode != 0:
             message = (
                 completed.stderr
                 or completed.stdout
+                or ""
             ).strip()
 
             raise ServiceOperationError(
@@ -301,7 +353,7 @@ class WindowsPowerShellServiceManager(
             )
 
         output_lines = [
-            line.strip()
+            line.strip().lstrip("\ufeff")
             for line in completed.stdout.splitlines()
             if line.strip()
         ]
@@ -311,20 +363,35 @@ class WindowsPowerShellServiceManager(
                 "PowerShell no devolvió información."
             )
 
+        raw_payload = output_lines[-1]
+
         try:
-            return json.loads(output_lines[-1])
+            payload = json.loads(raw_payload)
         except json.JSONDecodeError as exc:
             raise ServiceOperationError(
                 "Respuesta inválida de PowerShell: "
-                f"{output_lines[-1]}"
+                f"{raw_payload}"
             ) from exc
+
+        if not isinstance(payload, dict):
+            raise ServiceOperationError(
+                "PowerShell devolvió una estructura inválida."
+            )
+
+        return payload
 
     @staticmethod
     def _validate_service_name(
         service_name: str,
     ) -> None:
+        normalized = (
+            service_name.strip()
+            if isinstance(service_name, str)
+            else ""
+        )
+
         if not SERVICE_NAME_PATTERN.fullmatch(
-            service_name
+            normalized
         ):
             raise ServiceOperationError(
                 "Nombre de servicio inválido."
@@ -335,13 +402,22 @@ class WindowsPowerShellServiceManager(
         payload: dict,
         fallback_name: str,
     ) -> ServiceStatus:
-        process_id = payload.get("process_id")
+        process_id = payload.get(
+            "process_id"
+        )
 
-        if process_id in {0, "0", None}:
+        if process_id in {
+            0,
+            "0",
+            None,
+            "",
+        }:
             process_id = None
 
         return ServiceStatus(
-            exists=bool(payload.get("exists")),
+            exists=bool(
+                payload.get("exists")
+            ),
             name=str(
                 payload.get("name")
                 or fallback_name
@@ -350,19 +426,26 @@ class WindowsPowerShellServiceManager(
                 payload.get("state")
                 or "unknown"
             ).lower(),
-            start_mode=payload.get("start_mode"),
+            start_mode=payload.get(
+                "start_mode"
+            ),
             process_id=(
                 int(process_id)
                 if process_id is not None
                 else None
             ),
-            message=payload.get("message"),
+            message=payload.get(
+                "message"
+            ),
         )
 
 
 class MockServiceManager(ServiceManager):
     def __init__(self) -> None:
-        self._states: dict[str, str] = {}
+        self._states: dict[
+            str,
+            str,
+        ] = {}
         self._lock = threading.Lock()
 
     def get_status(
@@ -419,6 +502,10 @@ class MockServiceManager(ServiceManager):
         state: str,
     ) -> ServiceStatus:
         with self._lock:
-            self._states[service_name] = state
+            self._states[
+                service_name
+            ] = state
 
-        return self.get_status(service_name)
+        return self.get_status(
+            service_name
+        )
