@@ -1,70 +1,73 @@
 "use strict";
 
+
 function initializePasswordToggle() {
-    const toggles = document.querySelectorAll(
+    const toggle = document.querySelector(
         "[data-password-toggle]"
     );
 
-    toggles.forEach(toggle => {
-        const inputId = toggle.getAttribute(
-            "aria-controls"
-        );
+    if (!toggle) {
+        return;
+    }
 
-        const input = document.getElementById(
-            inputId
-        );
+    const inputId = toggle.getAttribute(
+        "aria-controls"
+    );
 
-        const visibleIcon = toggle.querySelector(
-            ".auth-eye-visible"
-        );
+    const input = document.getElementById(
+        inputId
+    );
 
-        const hiddenIcon = toggle.querySelector(
-            ".auth-eye-hidden"
-        );
+    const eyeIcon = toggle.querySelector(
+        ".icon-eye"
+    );
 
-        if (!input) {
-            return;
+    const eyeOffIcon = toggle.querySelector(
+        ".icon-eye-off"
+    );
+
+    if (!input) {
+        return;
+    }
+
+    toggle.addEventListener(
+        "click",
+        () => {
+            const currentlyVisible = (
+                input.type === "text"
+            );
+
+            input.type = (
+                currentlyVisible
+                    ? "password"
+                    : "text"
+            );
+
+            toggle.setAttribute(
+                "aria-pressed",
+                String(!currentlyVisible)
+            );
+
+            toggle.setAttribute(
+                "aria-label",
+                currentlyVisible
+                    ? "Mostrar contraseña"
+                    : "Ocultar contraseña"
+            );
+
+            eyeIcon?.classList.toggle(
+                "is-hidden",
+                !currentlyVisible
+            );
+
+            eyeOffIcon?.classList.toggle(
+                "is-hidden",
+                currentlyVisible
+            );
+
+            input.focus();
         }
-
-        toggle.addEventListener(
-            "click",
-            () => {
-                const showingPassword = (
-                    input.type === "text"
-                );
-
-                input.type = (
-                    showingPassword
-                        ? "password"
-                        : "text"
-                );
-
-                toggle.setAttribute(
-                    "aria-pressed",
-                    String(!showingPassword)
-                );
-
-                toggle.setAttribute(
-                    "aria-label",
-                    showingPassword
-                        ? "Mostrar contraseña"
-                        : "Ocultar contraseña"
-                );
-
-                visibleIcon?.classList.toggle(
-                    "is-hidden",
-                    !showingPassword
-                );
-
-                hiddenIcon?.classList.toggle(
-                    "is-hidden",
-                    showingPassword
-                );
-
-                input.focus();
-            }
-        );
-    });
+    );
 }
 
 
