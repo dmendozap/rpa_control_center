@@ -6,158 +6,219 @@
 
 {% block content %}
 <section
-    class="page-heading detail-heading"
+    class="application-detail"
     data-application-detail
     data-app-code="{{ application.code }}"
 >
-    <div>
-        <a
-            class="back-link"
-            href="{{ url_for('dashboard.index') }}"
-        >
-            ← Aplicaciones
-        </a>
-
-        <span class="eyebrow">
-            DETALLE DE SERVICIO
-        </span>
-
-        <h1>{{ application.name }}</h1>
-
-        <p>
-            {{ application.description or "" }}
-        </p>
-    </div>
-
-    <div class="detail-actions">
-        {% if application.application_url %}
-        <a
-            class="button button-secondary"
-            href="{{ application.application_url }}"
-            target="_blank"
-            rel="noopener noreferrer"
-        >
-            Abrir aplicación
-        </a>
-        {% endif %}
-
-        {% if
-            access_level.value >= 20
-            and application.allow_control
-        %}
-        <button
-            class="button button-success"
-            data-service-action="start"
-            data-app-code="{{ application.code }}"
-        >
-            Iniciar
-        </button>
-
-        <button
-            class="button button-warning"
-            data-service-action="restart"
-            data-app-code="{{ application.code }}"
-        >
-            Reiniciar
-        </button>
-
-        <button
-            class="button button-danger"
-            data-service-action="stop"
-            data-app-code="{{ application.code }}"
-        >
-            Detener
-        </button>
-        {% endif %}
-    </div>
-</section>
-
-<section class="detail-grid">
-    <article class="panel">
-        <h2>Estado operativo</h2>
-
-        <dl class="metrics-grid metrics-grid-detail">
-            <div>
-                <dt>Servicio</dt>
-                <dd data-field="service-name">
-                    {{ application.service_name }}
-                </dd>
-            </div>
-
-            <div>
-                <dt>Estado</dt>
-                <dd>
-                    <span
-                        class="status-badge status-loading"
-                        data-field="service-state"
-                    >
-                        Consultando
-                    </span>
-                </dd>
-            </div>
-
-            <div>
-                <dt>Inicio</dt>
-                <dd data-field="start-mode">—</dd>
-            </div>
-
-            <div>
-                <dt>PID</dt>
-                <dd data-field="process-id">—</dd>
-            </div>
-
-            <div>
-                <dt>Health</dt>
-                <dd data-field="health-status">—</dd>
-            </div>
-
-            <div>
-                <dt>Respuesta</dt>
-                <dd data-field="response-time">—</dd>
-            </div>
-
-            <div>
-                <dt>CPU</dt>
-                <dd data-field="cpu">—</dd>
-            </div>
-
-            <div>
-                <dt>Memoria</dt>
-                <dd data-field="memory">—</dd>
-            </div>
-
-            <div>
-                <dt>Uptime</dt>
-                <dd data-field="uptime">—</dd>
-            </div>
-        </dl>
-    </article>
-
-    <article class="panel log-panel">
-        <div class="panel-title-row">
-            <div>
-                <h2>Logs en tiempo real</h2>
-
-                <p class="muted">
-                    {{ application.log_file or
-                       "Sin ruta configurada" }}
-                </p>
-            </div>
-
-            <button
-                class="button button-ghost"
-                type="button"
-                data-clear-log
+    <header class="page-heading detail-heading">
+        <div>
+            <a
+                class="back-link"
+                href="{{ url_for('dashboard.index') }}"
             >
-                Limpiar vista
-            </button>
+                ← Volver a aplicaciones
+            </a>
+
+            <span class="eyebrow">
+                SERVICIO ADMINISTRADO
+            </span>
+
+            <h1>{{ application.name }}</h1>
+
+            {% if application.description %}
+            <p>{{ application.description }}</p>
+            {% endif %}
         </div>
 
-        <pre
-            id="live-log"
-            class="terminal"
-        >{% for line in log_lines %}{{ line.rstrip() }}
-{% endfor %}</pre>
-    </article>
+        <div class="detail-actions">
+            {% if application.application_url %}
+            <a
+                class="button button-secondary"
+                href="{{ application.application_url }}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                Abrir aplicación
+            </a>
+            {% endif %}
+
+            {% if
+                application.allow_control
+                and access_level.value >= 20
+            %}
+            <button
+                class="button button-success"
+                type="button"
+                data-service-action="start"
+                data-app-code="{{ application.code }}"
+            >
+                Iniciar
+            </button>
+
+            <button
+                class="button button-warning"
+                type="button"
+                data-service-action="restart"
+                data-app-code="{{ application.code }}"
+            >
+                Reiniciar
+            </button>
+
+            <button
+                class="button button-danger"
+                type="button"
+                data-service-action="stop"
+                data-app-code="{{ application.code }}"
+            >
+                Detener
+            </button>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="detail-grid">
+        <!-- Estado operativo -->
+        <section class="panel">
+            <div class="panel-title-row">
+                <div>
+                    <span class="eyebrow">
+                        MONITOREO
+                    </span>
+
+                    <h2>Estado operativo</h2>
+                </div>
+
+                <span
+                    class="status-badge status-loading"
+                    data-field="service-state"
+                >
+                    Consultando
+                </span>
+            </div>
+
+            <dl class="metrics-grid metrics-grid-detail">
+                <div>
+                    <dt>Servicio</dt>
+
+                    <dd data-field="service-name">
+                        {{ application.service_name }}
+                    </dd>
+                </div>
+
+                <div>
+                    <dt>Estado</dt>
+
+                    <dd>
+                        <span
+                            class="status-badge status-loading"
+                            data-field="service-state-secondary"
+                        >
+                            Consultando
+                        </span>
+                    </dd>
+                </div>
+
+                <div>
+                    <dt>Inicio</dt>
+
+                    <dd data-field="start-mode">
+                        —
+                    </dd>
+                </div>
+
+                <div>
+                    <dt>PID</dt>
+
+                    <dd data-field="process-id">
+                        —
+                    </dd>
+                </div>
+
+                <div>
+                    <dt>Health</dt>
+
+                    <dd data-field="health-status">
+                        —
+                    </dd>
+                </div>
+
+                <div>
+                    <dt>Respuesta</dt>
+
+                    <dd data-field="response-time">
+                        —
+                    </dd>
+                </div>
+
+                <div>
+                    <dt>CPU</dt>
+
+                    <dd data-field="cpu">
+                        —
+                    </dd>
+                </div>
+
+                <div>
+                    <dt>Memoria</dt>
+
+                    <dd data-field="memory">
+                        —
+                    </dd>
+                </div>
+
+                <div>
+                    <dt>Uptime</dt>
+
+                    <dd data-field="uptime">
+                        —
+                    </dd>
+                </div>
+            </dl>
+
+            <div
+                class="service-diagnostic"
+                data-service-diagnostic
+                hidden
+            >
+                <strong>Diagnóstico</strong>
+
+                <p data-field="service-message"></p>
+            </div>
+        </section>
+
+        <!-- Logs -->
+        <section class="panel">
+            <div class="panel-title-row">
+                <div>
+                    <span class="eyebrow">
+                        OBSERVABILIDAD
+                    </span>
+
+                    <h2>Logs en tiempo real</h2>
+
+                    {% if application.log_file %}
+                    <p class="muted">
+                        {{ application.log_file }}
+                    </p>
+                    {% endif %}
+                </div>
+
+                <button
+                    class="button button-ghost"
+                    type="button"
+                    data-clear-log
+                >
+                    Limpiar vista
+                </button>
+            </div>
+
+            <pre
+                id="live-log"
+                class="terminal"
+                aria-live="polite"
+                aria-label="Logs en tiempo real"
+            >{% if log_lines is defined %}{% for line in log_lines %}{{ line }}{% endfor %}{% elif initial_log_lines is defined %}{% for line in initial_log_lines %}{{ line }}{% endfor %}{% endif %}</pre>
+        </section>
+    </div>
 </section>
 {% endblock %}
